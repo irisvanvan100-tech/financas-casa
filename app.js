@@ -1,0 +1,385 @@
+const sb = supabase.createClient(
+  "https://tffpcqjzixnquvvahovl.supabase.co",
+  "sb_publishable_Yr3s-Xy-TSs13wNCU4qtSA_xq0QqtnN",
+);
+const $ = (s) => document.querySelector(s);
+const S = {};
+const q = async (p) => (await p).data || [];
+const R = (v) =>
+  "R$ " +
+  Number(v || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>"]/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+  );
+const opt = (a, v) =>
+  a
+    .map(
+      (x) =>
+        `<option value="${x.id}"${x.id == v ? " selected" : ""}>${esc(x.nome)}</option>`,
+    )
+    .join("");
+const hoje = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 10);
+};
+const nextM = (s) => {
+  const [y, m] = s.split("-").map(Number);
+  return m == 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+
+// O input type="month" retorna AAAA-MM e o mês já vem de 1 a 12.
+// Exemplo: "2026-11" = novembro de 2026 (mês 11). Não subtrair 1.
+const lerAnoMes = (valor) => {
+  const correspondencia = /^(\d{4})-(\d{2})$/.exec(String(valor || ""));
+  if (!correspondencia) return null;
+
+  const ano = Number(correspondencia[1]);
+  const mes = Number(correspondencia[2]);
+  if (!Number.isInteger(ano) || mes < 1 || mes > 12) return null;
+
+  return { ano, mes };
+};
+
+const nomeMesSelecionado = (valor) => {
+  const periodo = lerAnoMes(valor);
+  if (!periodo) return "";
+  const nomes = [
+    "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+    "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+  ];
+  return `${nomes[periodo.mes - 1]} de ${periodo.ano} (mês ${periodo.mes})`;
+};
+
+const nm = (id) => S.perf.find((p) => p.id == id)?.nome || "-";
+const cn = (id) => S.cat.find((c) => c.id == id)?.nome || "-";
+
+function toast(t) {
+  const m = $("#msg");
+  m.textContent = t;
+  m.style.display = "block";
+  clearTimeout(m.t);
+  m.t = setTimeout(() => (m.style.display = "none"), 2600);
+}
+
+function login() {
+  $("#nav").hidden = true;
+  $("#app").innerHTML = `<div class=card><h2>Finanças da Casa</h2><label>E-mail</label><input id=em type=email autocomplete=username><label>Senha</label><input id=pw type=password autocomplete=current-password><button id=go>Entrar</button></div>`;
+  $("#go").onclick = async () => {
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: $("#em").value.trim(),
+      password: $("#pw").value,
+    });
+    error ? toast("E-mail ou senha incorretos") : start(data.user);
+  };
+}
+
+async function start(u) {
+  S.user = u;
+  const t = ["profiles", "cartoes", "categorias"].map((n) =>
+    q(sb.from(n).select("*").order("id")),
+  );
+  [S.perf, S.cart, S.cat] = await Promise.all(t);
+  nav();
+  go("lanc");
+}
+
+const TABS = {
+  lanc: ["Lançar", vLanc],
+  mes: ["Fatura", vMes],
+  casa: ["Casa", vCasa],
+  pes: ["Pessoal", vPes],
+};
+
+function nav() {
+  const n = $("#nav");
+  n.hidden = false;
+  n.innerHTML =
+    Object.entries(TABS)
+      .map(([k, [t]]) => `<button data-k=${k}>${t}</button>`)
+      .join("") + '<button id=out>Sair</button>';
+  n.onclick = (e) => {
+    const k = e.target.dataset.k;
+    if (k) go(k);
+    if (e.target.id == "out") sb.auth.signOut().then(login);
+  };
+}
+
+function go(k) {
+  document
+    .querySelectorAll("nav button")
+    .forEach((b) => b.classList.toggle("on", b.dataset.k == k));
+  TABS[k][1]();
+}
+
+function vLanc() {
+  const h = hoje();
+  $("#app").innerHTML = `<div class=card><h2>Nova compra</h2>
+    <div class=row><div><label>Data</label><input id=d type=date value=${h}></div><div><label>Fatura</label><input id=f type=month value=${nextM(h.slice(0, 7))}></div></div>
+    <label>Valor (R$)</label><input id=v type=number step=0.01 inputmode=decimal><label>Estabelecimento</label><input id=e><label>Descrição</label><input id=ds>
+    <div class=row><div><label>Quem comprou</label><select id=q>${opt(S.perf, S.user.id)}</select></div><div><label>Cartão</label><select id=c>${opt(S.cart)}</select></div></div>
+    <label>Categoria</label><select id=k>${opt(S.cat.filter((x) => x.tipo == "compra"))}</select><label>Observação</label><input id=o><button id=sv>Salvar compra</button></div>`;
+  $("#d").onchange = (e) =>
+    e.target.value && ($("#f").value = nextM(e.target.value.slice(0, 7)));
+  $("#sv").onclick = async () => {
+    const v = parseFloat($("#v").value);
+    if (!(v > 0)) return toast("Informe o valor da compra");
+    const { error } = await sb.from("lancamentos").insert({
+      data_compra: $("#d").value,
+      horario: new Date().toTimeString().slice(0, 5),
+      comprador_id: $("#q").value,
+      cartao_id: +$("#c").value,
+      estabelecimento: $("#e").value,
+      descricao: $("#ds").value,
+      categoria_id: +$("#k").value,
+      valor: v,
+      observacao: $("#o").value,
+      fatura: $("#f").value + "-01",
+    });
+    error
+      ? toast("Erro: " + error.message)
+      : (toast("Compra salva"), vLanc());
+  };
+}
+
+async function vMes() {
+  S.f = S.f || nextM(hoje().slice(0, 7));
+  $("#app").innerHTML = `<div class=card><label>Fatura</label><input id=f type=month value=${S.f}></div><div id=r></div>`;
+  $("#f").onchange = (e) => {
+    S.f = e.target.value;
+    load();
+  };
+  load();
+
+  async function load() {
+    const d = await q(
+      sb
+        .from("lancamentos")
+        .select("*")
+        .eq("fatura", S.f + "-01")
+        .order("data_compra", { ascending: false }),
+    );
+    const tot = d.reduce((a, x) => a + +x.valor, 0);
+    const grp = (fn) =>
+      Object.entries(
+        d.reduce((o, x) => {
+          o[fn(x)] = (o[fn(x)] || 0) + +x.valor;
+          return o;
+        }, {}),
+      )
+        .sort((a, b) => b[1] - a[1])
+        .map(
+          ([k, v]) =>
+            `<div class=li><span>${esc(k)}</span><b>${R(v)}</b></div>`,
+        )
+        .join("");
+    $("#r").innerHTML = `<div class=card><div class=big>${R(tot)}</div><div class=mut>${d.length} compras · metade para cada um: ${R(tot / 2)}</div><h2 class=t>Por pessoa</h2>${grp((x) => nm(x.comprador_id))}<h2 class=t>Por categoria</h2>${grp((x) => cn(x.categoria_id))}</div>
+      <div class=card><h2>Compras</h2>${d
+        .map(
+          (x) =>
+            `<div class=li><span>${esc(x.estabelecimento || x.descricao || "-")}<small>${x.data_compra.split("-").reverse().slice(0, 2).join("/")} · ${esc(nm(x.comprador_id))} · ${esc(cn(x.categoria_id))}</small></span><span><b>${R(x.valor)}</b><br><select data-id=${x.id} style="width:auto;padding:3px">${["Pendente", "Conferido", "Divergência"].map((s) => `<option${s == x.conferencia ? " selected" : ""}>${s}</option>`).join("")}</select> <button class="s g" data-del=${x.id} aria-label=Apagar>×</button></span></div>`,
+        )
+        .join("") || '<p class=mut>Nenhuma compra nesta fatura.</p>'}</div>`;
+    $("#r").onchange = async (e) => {
+      if (e.target.dataset.id)
+        await sb
+          .from("lancamentos")
+          .update({ conferencia: e.target.value })
+          .eq("id", e.target.dataset.id);
+    };
+    $("#r").onclick = async (e) => {
+      const id = e.target.dataset.del;
+      if (id && confirm("Apagar esta compra?")) {
+        await sb.from("lancamentos").delete().eq("id", id);
+        load();
+      }
+    };
+  }
+}
+
+async function vCasa() {
+  S.cm = S.cm || hoje().slice(0, 7);
+  const outro = S.perf.find((p) => p.id != S.user.id);
+  $("#app").innerHTML = `<div class=card><h2>Nova despesa da casa</h2><div class=row><div><label>Data</label><input id=d type=date value=${hoje()}></div><div><label>Valor (R$)</label><input id=v type=number step=0.01 inputmode=decimal></div></div>
+    <div class=row><div><label>Despesa</label><select id=k>${opt(S.cat.filter((x) => x.tipo == "despesa"))}</select></div><div><label>Tipo</label><select id=t><option>Fixo<option>Variável</select></div></div>
+    <label>Descrição</label><input id=ds><label>Minha parte (%) — vazio = 50/50</label><input id=p type=number min=0 max=100 inputmode=decimal><button id=sv>Salvar despesa</button></div>
+    <div class=card><label>Mês</label><input id=m type=month value=${S.cm}></div><div id=r></div>`;
+  $("#m").onchange = (e) => {
+    S.cm = e.target.value;
+    load();
+  };
+  load();
+  $("#sv").onclick = async () => {
+    const v = parseFloat($("#v").value);
+    const p = $("#p").value;
+    if (!(v > 0)) return toast("Informe o valor");
+    const divisao =
+      p === "" || !outro
+        ? null
+        : { [S.user.id]: p / 100, [outro.id]: 1 - p / 100 };
+    const { error } = await sb.from("despesas_casa").insert({
+      data: $("#d").value,
+      categoria_id: +$("#k").value,
+      tipo: $("#t").value,
+      descricao: $("#ds").value,
+      valor: v,
+      divisao,
+    });
+    error
+      ? toast("Erro: " + error.message)
+      : (toast("Despesa salva"), vCasa());
+  };
+
+  async function load() {
+    const d = await q(
+      sb
+        .from("despesas_casa")
+        .select("*")
+        .eq("mes", S.cm + "-01")
+        .order("data"),
+    );
+    const mine = (x) =>
+      x.valor * (x.divisao ? (x.divisao[S.user.id] ?? 0) : 0.5);
+    const tot = d.reduce((a, x) => a + +x.valor, 0);
+    $("#r").innerHTML = `<div class=card><div class=big>${R(tot)}</div><div class=mut>Minha parte: ${R(d.reduce((a, x) => a + mine(x), 0))}</div>${d
+      .map(
+        (x) =>
+          `<div class=li><span>${esc(x.descricao || cn(x.categoria_id))}<small>${esc(cn(x.categoria_id))} · ${x.tipo}</small></span><span><b>${R(x.valor)}</b> <button class="s g" data-del=${x.id} aria-label=Apagar>×</button></span></div>`,
+      )
+      .join("")}</div>`;
+    $("#r").onclick = async (e) => {
+      const id = e.target.dataset.del;
+      if (id && confirm("Apagar esta despesa?")) {
+        await sb.from("despesas_casa").delete().eq("id", id);
+        load();
+      }
+    };
+  }
+}
+
+async function vPes() {
+  S.pm = S.pm || hoje().slice(0, 7);
+  $("#app").innerHTML = `<div class=card><label>Mês (só você vê esta aba)</label><input id=m type=month value=${S.pm}><div class=mut id=mes-info></div></div><div id=r></div>`;
+  $("#mes-info").textContent = nomeMesSelecionado(S.pm);
+  $("#m").onchange = (e) => {
+    S.pm = e.target.value;
+    $("#mes-info").textContent = nomeMesSelecionado(S.pm);
+    load();
+  };
+  load();
+
+  async function load() {
+    // Faz a conversão explícita: "2026-11" vira ano=2026 e mes=11.
+    const periodo = lerAnoMes(S.pm);
+    if (!periodo) return toast("Mês inválido. Selecione novamente.");
+    const { ano: a, mes: m } = periodo;
+    const [sal, its, pc] = await Promise.all([
+      sb
+        .from("pessoal_salarios")
+        .select("*")
+        .eq("ano", a)
+        .eq("mes", m)
+        .maybeSingle(),
+      q(
+        sb
+          .from("pessoal_itens")
+          .select("*")
+          .eq("ano", a)
+          .eq("mes", m)
+          .order("nome"),
+      ),
+      sb.rpc("parte_casa", { p_mes: S.pm + "-01" }),
+    ]);
+    const s = [sal.data?.salario1 || 0, sal.data?.salario2 || 0];
+    const c = +(pc.data || 0);
+    const ca = [Math.round(c * 50) / 100, 0];
+    ca[1] = Math.round((c - ca[0]) * 100) / 100;
+    let resto = 0;
+    const bloco = (n) => {
+      const l = its.filter((x) => x.salario == n);
+      const t = l.reduce((z, x) => z + +x.valor, 0) + ca[n - 1];
+      const r = s[n - 1] - t;
+      resto += r;
+      return `<div class=card><h2>${n}º salário</h2><label>Salário (R$)</label><input id=s${n} type=number step=0.01 inputmode=decimal value="${s[n - 1] || ""}">${l
+        .map(
+          (x) =>
+            `<div class=li><span>${esc(x.nome)}<small>${x.grupo}</small></span><span><b>${R(x.valor)}</b> <button class="s g" data-del=${x.id} aria-label=Apagar>×</button></span></div>`,
+        )
+        .join("")}<div class=li><span>Despesa da casa<small>automática</small></span><b>${R(ca[n - 1])}</b></div><div class=li><b>Resto</b><b class="${r < 0 ? "neg" : ""}">${R(r)}</b></div></div>`;
+    };
+    $("#r").innerHTML =
+      bloco(1) +
+      bloco(2) +
+      `<div class=card><div class=mut>Resto total do mês</div><div class="big ${resto < 0 ? "neg" : ""}">${R(resto)}</div><button id=ss>Salvar salários</button></div>
+        <div class=card><h2>Novo gasto</h2><div class=row><select id=n><option value=1>1º salário<option value=2>2º salário</select><select id=g><option value=cartao>Cartão<option value=fixo>Fixo<option value=outros>Outros</select></div><label>Nome</label><input id=nm><label>Valor (R$)</label><input id=v type=number step=0.01 inputmode=decimal><button id=add>Adicionar gasto</button><button id=cp class=g>Copiar gastos do mês anterior</button></div>`;
+    $("#ss").onclick = async () => {
+      const { error } = await sb
+        .from("pessoal_salarios")
+        .upsert(
+          {
+            user_id: S.user.id,
+            ano: a,
+            mes: m,
+            salario1: +$("#s1").value || 0,
+            salario2: +$("#s2").value || 0,
+          },
+          { onConflict: "user_id,ano,mes" },
+        );
+      error
+        ? toast("Erro: " + error.message)
+        : (toast("Salários salvos"), load());
+    };
+    $("#add").onclick = async () => {
+      const v = parseFloat($("#v").value);
+      if (!$("#nm").value || isNaN(v)) return toast("Informe nome e valor");
+      const { error } = await sb.from("pessoal_itens").insert({
+        ano: a,
+        mes: m,
+        salario: +$("#n").value,
+        grupo: $("#g").value,
+        nome: $("#nm").value,
+        valor: v,
+      });
+      error ? toast("Erro: " + error.message) : load();
+    };
+    $("#cp").onclick = async () => {
+      if (its.length && !confirm("Este mês já tem gastos. Copiar mesmo assim?"))
+        return;
+      const pa = m == 1 ? a - 1 : a;
+      const pm = m == 1 ? 12 : m - 1;
+      const prev = await q(
+        sb.from("pessoal_itens").select("*").eq("ano", pa).eq("mes", pm),
+      );
+      if (!prev.length) return toast("O mês anterior não tem gastos");
+      await sb.from("pessoal_itens").insert(
+        prev.map((x) => ({
+          ano: a,
+          mes: m,
+          salario: x.salario,
+          grupo: x.grupo,
+          nome: x.nome,
+          valor: x.valor,
+        })),
+      );
+      load();
+    };
+    $("#r").onclick = async (e) => {
+      const id = e.target.dataset.del;
+      if (id && confirm("Apagar este gasto?")) {
+        await sb.from("pessoal_itens").delete().eq("id", id);
+        load();
+      }
+    };
+  }
+}
+
+sb.auth
+  .getSession()
+  .then(({ data: { session } }) =>
+    session ? start(session.user) : login(),
+  );
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
