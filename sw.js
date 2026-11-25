@@ -1,7 +1,7 @@
 // Finanças da Casa - service worker
 // Página (index.html): busca na internet primeiro; se demorar mais de 3s ou estiver offline, usa a cópia guardada.
 // Arquivos fixos (biblioteca, ícones, fontes): usa a cópia guardada, sem esperar a internet.
-const C='fin-v10',
+const C='fin-v11',
   SUPA='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
   A=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png',SUPA];
 
