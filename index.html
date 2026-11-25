@@ -172,9 +172,9 @@ S.pTab=="mes"?vPesMes():S.pTab=="vt"?vVT():vGuard()}
 function irGuardar(v){S.guardPre=v;S.pTab="guard";vPes();scrollTo(0,0)}
 
 function vPesMes(){const jaq=S.jaq;
-$("#pv").innerHTML=`<div id="pstrip"></div><div class="card" style="padding:13px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><label style="margin:0">Mês pessoal</label><span class="badge b-sage">Privado · só você vê</span></div><input id="m" type="month" value="${S.pm}" style="margin-top:6px"></div><div id="r"></div>`;
+$("#pv").innerHTML=`<div class="card" style="padding:13px 16px"><div style="display:flex;justify-content:space-between;align-items:center"><label style="margin:0">Mês pessoal</label><span class="badge b-sage">Privado · só você vê</span></div><input id="m" type="month" value="${S.pm}" style="margin-top:6px"></div><div id="r"></div>`;
 $("#m").onchange=e=>{S.pm=e.target.value;load()};load();
-pesTudo().then(T=>{const el=$("#pstrip");if(S.pTab!=="mes"||!el)return;const n=nivel(T.pts);el.innerHTML=`<button class="strip" id="pgo">${svgI("flame",30,"#E3C4A8")}<span style="flex:1"><span style="display:flex;justify-content:space-between;gap:8px;font-size:.84rem"><b>${T.streak} ${T.streak==1?"mês":"meses"} no azul · Nível ${n.L}</b><span style="opacity:.85">${n.dentro}/250</span></span><span class="xp"><span style="width:${n.dentro/2.5}%"></span></span></span></button>`;$("#pgo").onclick=()=>irGuardar("")}).catch(()=>{});
+
 async function load(){const[a,m]=S.pm.split("-").map(Number);const[sal,its,dc,lFat]=await Promise.all([sb.from("pessoal_salarios").select("*").eq("ano",a).eq("mes",m).maybeSingle(),q(sb.from("pessoal_itens").select("*").eq("ano",a).eq("mes",m).order("nome")),q(sb.from("despesas_casa").select("*").eq("mes",S.pm+"-01")),q(sb.from("lancamentos").select("valor").eq("fatura",S.pm+"-01"))]);
 const fatTot=lFat.reduce((acc,x)=>acc+ +x.valor,0);const minePct=x=>x.divisao?(x.divisao[S.user.id]??0):0.5;const casaPend=dc.filter(x=>x.situacao!=="Pago").reduce((acc,x)=>acc+(+x.valor*minePct(x)),0)+(fatTot*0.5);
 const s=[sal.data?.salario1||0,sal.data?.salario2||0];const ca=jaq?[Math.round(casaPend*100)/100,0]:[Math.round(casaPend*50)/100,0];if(!jaq)ca[1]=Math.round((casaPend-ca[0])*100)/100;
