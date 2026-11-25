@@ -58,8 +58,8 @@ nav button.on{color:var(--pri-dk);background:var(--snd-soft);font-weight:700}nav
 .login-wrap{max-width:420px;margin:28px auto}
 .login-logo{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--pri),var(--pri-dk));color:var(--on);display:flex;align-items:center;justify-content:center;margin-bottom:12px;border:2px solid var(--snd)}
 #msg{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);border:1px solid var(--snd);padding:10px 16px;border-radius:12px;display:none;z-index:20;max-width:92%;font-size:.88rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.18)}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--bg-deep);border:1px solid var(--bd);border-radius:14px;margin-bottom:13px}
-.seg button{margin:0;padding:10px;border-radius:10px;background:none;color:var(--mut);box-shadow:none;font-weight:600}.seg button.on{background:var(--card);color:var(--fg);font-weight:700;box-shadow:0 1px 4px rgba(43,49,41,.1)}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;background:var(--bg-deep);border:1px solid var(--bd);border-radius:14px;margin-bottom:13px}
+.seg button{margin:0;padding:10px 4px;font-size:.88rem;border-radius:10px;background:none;color:var(--mut);box-shadow:none;font-weight:600}.seg button.on{background:var(--card);color:var(--fg);font-weight:700;box-shadow:0 1px 4px rgba(43,49,41,.1)}
 .strip{display:flex;align-items:center;gap:12px;margin:0 0 13px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,var(--pri),var(--pri-dk));color:var(--on);text-align:left;font-weight:400;box-shadow:0 4px 12px rgba(122,139,111,.25)}
 .xp{display:block;height:7px;margin-top:6px;border-radius:999px;background:rgba(243,239,230,.22);overflow:hidden}.xp>span{display:block;height:100%;background:var(--snd);border-radius:999px}
 .medals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
@@ -68,6 +68,9 @@ nav button.on{color:var(--pri-dk);background:var(--snd-soft);font-weight:700}nav
 .medal .x{position:absolute;top:3px;right:3px;padding:0 6px}
 .rend{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--pri-soft);border-radius:12px;padding:9px 11px;margin-top:10px;font-size:.76rem;color:var(--mut)}.rend b{display:block;color:var(--ok);font-size:.92rem}
 details.card>summary{cursor:pointer;list-style:none;font-family:"Fraunces",Georgia,serif;font-size:1.05rem;font-weight:700}details.card>summary::-webkit-details-marker{display:none}
+.vt-bar{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--mut);margin-top:5px}.vt-bar>span:first-child{width:46px}.vt-bar b{width:84px;text-align:right;color:var(--fg)}
+.vt-track{flex:1;height:12px;border-radius:999px;background:var(--bg-deep);overflow:hidden}.vt-track>span{display:block;height:100%;border-radius:999px;min-width:2px}
+.vt-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 </style></head><body>
 <div id="msg" role="status"></div><header id="hdr" hidden></header><main id="app"></main><nav id="nav" hidden></nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -163,9 +166,9 @@ const pts=20*pagos+50*movs.filter(x=>+x.valor>0).length+100*nAzul;
 return{H,fim,streak,best,tudoPago,pts,cx:cxR.data||[],cxErr:cxR.error,movs,conq}}
 
 async function vPes(){S.pm=S.pm||hoje().slice(0,7);S.pTab=S.pTab||"mes";S.jaq=/jaqueline/i.test(nm(S.user.id)+(S.user.email||""));
-$("#app").innerHTML=`<div class="seg" role="tablist"><button role="tab" aria-selected="${S.pTab=="mes"}" data-pt="mes" class="${S.pTab=="mes"?"on":""}">Meu mês</button><button role="tab" aria-selected="${S.pTab=="guard"}" data-pt="guard" class="${S.pTab=="guard"?"on":""}">Guardado</button></div><div id="pv"></div>`;
+$("#app").innerHTML=`<div class="seg" role="tablist"><button role="tab" aria-selected="${S.pTab=="mes"}" data-pt="mes" class="${S.pTab=="mes"?"on":""}">Meu mês</button><button role="tab" aria-selected="${S.pTab=="guard"}" data-pt="guard" class="${S.pTab=="guard"?"on":""}">Guardado</button><button role="tab" aria-selected="${S.pTab=="vt"}" data-pt="vt" class="${S.pTab=="vt"?"on":""}">VT + Alim.</button></div><div id="pv"></div>`;
 $(".seg").onclick=e=>{const b=e.target.closest("[data-pt]");if(b&&b.dataset.pt!==S.pTab){S.pTab=b.dataset.pt;vPes()}};
-S.pTab=="mes"?vPesMes():vGuard()}
+S.pTab=="mes"?vPesMes():S.pTab=="vt"?vVT():vGuard()}
 function irGuardar(v){S.guardPre=v;S.pTab="guard";vPes();scrollTo(0,0)}
 
 function vPesMes(){const jaq=S.jaq;
@@ -187,6 +190,32 @@ $("#add").onclick=async()=>{const v=toNum($("#v").value);if(!$("#nm").value.trim
 $("#cp").onclick=async()=>{if(its.length&&!confirm("Este mês já tem gastos. Copiar mesmo assim?"))return;const pa=m==1?a-1:a,pm=m==1?12:m-1,prev=await q(sb.from("pessoal_itens").select("*").eq("ano",pa).eq("mes",pm));if(!prev.length)return toast("O mês anterior não tem gastos");await sb.from("pessoal_itens").insert(prev.map(x=>({ano:a,mes:m,salario:jaq?1:x.salario,grupo:x.grupo,nome:x.nome,valor:x.valor})));toast("Gastos copiados!");load()};
 $("#r").onclick=async e=>{const gd=e.target.closest("[data-guardar]");if(gd)return irGuardar(gd.dataset.guardar.replace(".",","));const tgl=e.target.closest("[data-toggle]");if(tgl){const nextSt=tgl.dataset.st;const{error}=await sb.from("pessoal_itens").update({situacao:nextSt}).eq("id",tgl.dataset.toggle);if(error)return toast("Erro: "+error.message);toast(nextSt==="Pago"?"Marcado como Pago! +20 pontos":"Reaberto como A pagar");load();return}const del=e.target.closest("[data-del]");if(del&&confirm("Apagar este gasto?")){await sb.from("pessoal_itens").delete().eq("id",del.dataset.del);load()}}}}
 
+/* ===== Aba Pessoal: VT + Alimentação ===== */
+const VT_TIPOS={vt:"Vale transporte",alim:"Alimentação"};
+function vVT(){S.vm=S.vm||hoje().slice(0,7);if(S.vtEnt===undefined)S.vtEnt=false;S.vtTipo=S.vtTipo||"alim";const el=$("#pv");
+el.innerHTML=`<div class="card" style="padding:13px 16px"><label style="margin-top:0">Mês</label><input id="vm" type="month" value="${S.vm}"></div><div id="vr"><div class="card"><p class="mut" style="margin:0;text-align:center">Carregando…</p></div></div>`;
+$("#vm").onchange=e=>{if(e.target.value){S.vm=e.target.value;load()}};load();
+async function load(){const vm=S.vm,[y,m]=vm.split("-").map(Number),ult=`${vm}-${String(new Date(y,m,0).getDate()).padStart(2,"0")}`;
+const chk=await sb.from("vt_lancamentos").select("id").limit(1);if(vm!==S.vm||S.pTab!=="vt")return;
+if(chk.error){$("#vr").innerHTML=`<div class="card"><h2>Falta preparar o banco de dados</h2><p class="mut">Esta aba precisa de uma tabela nova no Supabase. Rode o SQL que o Claude passou (SQL Editor → colar → Run) e abra esta aba de novo.</p><p class="mut" style="margin:0">Detalhe técnico: ${esc(chk.error.message)}</p></div>`;return}
+const all=await qAll(()=>sb.from("vt_lancamentos").select("*").lte("data",ult).order("data",{ascending:false}).order("id",{ascending:false}));if(vm!==S.vm||S.pTab!=="vt")return;
+const sig=x=>x.entrada?+x.valor:-x.valor,doMes=all.filter(x=>String(x.data).slice(0,7)===vm);
+const anterior=all.filter(x=>String(x.data).slice(0,7)<vm).reduce((z,x)=>z+sig(x),0);
+const soma=(l,f)=>l.filter(f).reduce((z,x)=>z+ +x.valor,0);
+const entrou=soma(doMes,x=>x.entrada),saiu=soma(doMes,x=>!x.entrada),saldo=anterior+entrou-saiu;
+const T=Object.keys(VT_TIPOS).map(k=>({k,e:soma(doMes,x=>x.tipo===k&&x.entrada),s:soma(doMes,x=>x.tipo===k&&!x.entrada)}));
+const mx=Math.max(1,...T.flatMap(t=>[t.e,t.s]));
+const barra=(rot,v,cor)=>`<div class="vt-bar"><span>${rot}</span><span class="vt-track"><span style="width:${(v/mx*100).toFixed(1)}%;background:${cor}"></span></span><b class="num">${R(v)}</b></div>`;
+const graf=T.map((t,i)=>{const sob=t.e-t.s;return `<div style="${i?"padding-top:12px;margin-top:12px;border-top:1px solid var(--bd)":""}"><div style="display:flex;justify-content:space-between;gap:8px;margin-bottom:6px"><b>${VT_TIPOS[t.k]}</b><span class="mut">${sob<0?"passou":"sobrou"} <b class="${sob<0?"neg":"ok"}">${R(Math.abs(sob))}</b></span></div>${barra("Entrou",t.e,"var(--pri)")}${barra("Gastou",t.s,"var(--snd-dk)")}</div>`}).join("");
+const dataPad=vm===hoje().slice(0,7)?hoje():vm+"-01",ent=S.vtEnt;
+$("#vr").innerHTML=`<div class="card card-sage"><div class="eyebrow">Saldo acumulado</div><div class="big${saldo<0?" neg":""}">${R(saldo)}</div>${anterior?`<div class="mut" style="margin-top:4px">Inclui ${R(anterior)} ${anterior<0?"que ficaram negativos":"que sobraram"} dos meses anteriores</div>`:""}<div class="kpis"><div class="kpi"><small>Entrou no mês</small><b>+ ${R(entrou)}</b></div><div class="kpi"><small>Saiu no mês</small><b>− ${R(saiu)}</b></div></div></div>
+<div class="card"><h2>Total de cada um no mês</h2>${graf}<div style="display:flex;gap:14px;margin-top:10px" class="mut"><span><i class="vt-dot" style="background:var(--pri)"></i>Entrou</span><span><i class="vt-dot" style="background:var(--snd-dk)"></i>Gastou</span></div></div>
+<div class="card"><h2>Novo lançamento</h2><div class="seg" style="grid-template-columns:1fr 1fr;margin:0 0 4px" role="group" aria-label="Tipo de lançamento"><button data-ent="0" class="${ent?"":"on"}" aria-pressed="${!ent}">− Saída (gasto)</button><button data-ent="1" class="${ent?"on":""}" aria-pressed="${ent}">+ Entrada</button></div><div class="row"><div><label>Tipo</label><select id="vtt">${Object.entries(VT_TIPOS).map(([k,v])=>`<option value="${k}"${k===S.vtTipo?" selected":""}>${v}</option>`).join("")}</select></div><div><label>Data</label><input id="vtd" type="date" value="${dataPad}"></div></div><div class="row"><div><label>Valor (R$)</label><input id="vtv" type="text" inputmode="decimal" autocomplete="off" placeholder="0,00"></div><div><label>Onde</label><input id="vto" placeholder="${ent?"Ex.: Depósito da empresa":"Ex.: Padaria"}"></div></div><button id="vts">Salvar ${ent?"entrada":"gasto"}</button></div>
+<div class="card"><h2>Lançamentos de ${nomeMes(vm)}</h2>${doMes.map(x=>`<div class="li"><span><strong>${esc(x.onde||(x.entrada?"Entrada":"Gasto"))}</strong><small>${String(x.data).slice(8,10)}/${String(x.data).slice(5,7)} · ${VT_TIPOS[x.tipo]||esc(x.tipo)}</small></span><span><b class="num ${x.entrada?"ok":"neg"}">${x.entrada?"+":"−"} ${R(x.valor)}</b><button class="s g" data-vdel="${x.id}" aria-label="Apagar lançamento" style="margin-left:6px">×</button></span></div>`).join("")||'<p class="mut" style="margin:0">Nenhum lançamento neste mês.</p>'}</div>`;
+$("#vtt").onchange=e=>S.vtTipo=e.target.value;
+$("#vr").onclick=async e=>{const t=e.target;const tg=t.closest("[data-ent]");if(tg){S.vtEnt=tg.dataset.ent==="1";S.vtTipo=$("#vtt").value;const keep={v:$("#vtv").value,o:$("#vto").value,d:$("#vtd").value};await load();$("#vtv").value=keep.v;$("#vto").value=keep.o;$("#vtd").value=keep.d;return}
+if(t.id==="vts"){const v=toNum($("#vtv").value);if(!(v>0))return toast("Valor inválido. Use, por exemplo, 38,90");const d=$("#vtd").value||dataPad;t.disabled=true;const{error}=await sb.from("vt_lancamentos").insert({data:d,tipo:$("#vtt").value,entrada:S.vtEnt,valor:v,onde:$("#vto").value.trim()});if(error){t.disabled=false;return toast("Erro: "+error.message)}S.vtTipo=$("#vtt").value;toast(S.vtEnt?"Entrada salva!":"Gasto salvo!");if(d.slice(0,7)!==S.vm){S.vm=d.slice(0,7);$("#vm").value=S.vm}return load()}
+const del=t.closest("[data-vdel]");if(del&&confirm("Apagar este lançamento?")){const{error}=await sb.from("vt_lancamentos").delete().eq("id",del.dataset.vdel);if(error)return toast("Erro: "+error.message);load()}}}}
 async function vGuard(){const el=$("#pv");el.innerHTML='<div class="card"><p class="mut" style="margin:0;text-align:center">Carregando…</p></div>';
 const[T,cdiC]=await Promise.all([pesTudo(),getCDI()]);if(S.pTab!=="guard"||!$("#pv"))return;
 if(T.cxErr){el.innerHTML=`<div class="card"><h2>Falta preparar o banco de dados</h2><p class="mut">As caixinhas e as conquistas precisam de 3 tabelas novas no Supabase. Rode o SQL que o Claude passou (SQL Editor → colar → Run) e abra esta aba de novo.</p><p class="mut" style="margin:0">Detalhe técnico: ${esc(T.cxErr.message)}</p></div>`;return}
