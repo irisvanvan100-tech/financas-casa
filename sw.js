@@ -4,7 +4,7 @@
 // se mudou, avisa a página para mostrar "Nova versão do app · Atualizar".
 // Arquivos fixos (biblioteca do Supabase, ícones, fontes): usa a cópia guardada, sem esperar a internet.
 // A biblioteca do Supabase fica dentro do próprio app (supabase-2.45.4.js), sem depender de CDN.
-const C='fin-v18',
+const C='fin-v19',
   SUPA='supabase-2.45.4.js',
   A=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png',SUPA];
 
