@@ -3,7 +3,7 @@
 // Nas próximas, abre na hora pela cópia guardada e busca a versão nova em segundo plano;
 // se mudou, avisa a página para mostrar "Nova versão do app · Atualizar".
 // Arquivos fixos (biblioteca, ícones, fontes): usa a cópia guardada, sem esperar a internet.
-const C='fin-v16',
+const C='fin-v17',
   SUPA='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js',
   A=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png',SUPA];
 
@@ -22,7 +22,7 @@ const avisar=async id=>{for(let i=0;i<20&&id;i++){const w=await self.clients.get
 
 self.addEventListener('fetch',e=>{
   const req=e.request,u=new URL(req.url);
-  if(req.method!='GET'||u.hostname.endsWith('supabase.co')||u.hostname.endsWith('formsubmit.co')||u.hostname.endsWith('bcb.gov.br'))return;
+  if(req.method!='GET'||u.hostname.endsWith('supabase.co')||u.hostname.endsWith('bcb.gov.br'))return;
 
   if(req.mode==='navigate'){
     const rede=fetch(req.url,{cache:'no-cache',credentials:'same-origin'}).then(r=>guardar(req,r));
