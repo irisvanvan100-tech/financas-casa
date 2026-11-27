@@ -76,7 +76,7 @@ details.card>summary{cursor:pointer;list-style:none;font-family:"Fraunces",Georg
 #upd{position:fixed;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:21;width:auto;margin:0;padding:9px 16px;border-radius:999px;background:var(--fg);color:var(--bg);border:1px solid var(--snd);font-size:.84rem;font-weight:500;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.18)}#upd b{color:var(--snd)}
 </style></head><body>
 <div id="msg" role="status"></div><button id="upd" hidden onclick="location.reload()">Nova versão do app · <b>Atualizar</b></button><header id="hdr" hidden></header><main id="app"></main><nav id="nav" hidden></nav>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="supabase-2.45.4.js"></script>
 <script>
 const sb=supabase.createClient("https://tffpcqjzixnquvvahovl.supabase.co","sb_publishable_Yr3s-Xy-TSs13wNCU4qtSA_xq0QqtnN");
 const $=s=>document.querySelector(s),S={fatFilter:"Todas"},q=async p=>(await p).data||[];
